@@ -48,14 +48,35 @@ class VideoEditor:
 
     def load_segments(self):
         """
-        Load and parse the timestamps file.
+        Load and parse the timestamps file (JSON or TXT format).
         
         Returns:
             list: List of segment dictionaries with video path, start and end times
         """
         if not os.path.exists(self.timestamps_file):
             raise FileNotFoundError(f"Timestamps file not found: {self.timestamps_file}")
-            
+        
+        # Check file extension to determine format
+        file_extension = os.path.splitext(self.timestamps_file)[1].lower()
+        
+        if file_extension == '.txt':
+            return self._load_segments_from_txt()
+        elif file_extension == '.json':
+            return self._load_segments_from_json()
+        else:
+            # Try to auto-detect format - check first character
+            try:
+                with open(self.timestamps_file, 'r', encoding='utf-8') as f:
+                    first_char = f.read(1)
+                if first_char in ['{', '[']:
+                    return self._load_segments_from_json()
+                else:
+                    return self._load_segments_from_txt()
+            except:
+                return self._load_segments_from_txt()
+
+    def _load_segments_from_json(self):
+        """Load segments from JSON format."""
         with open(self.timestamps_file, 'r', encoding='utf-8') as f:
             data = json.load(f)
         
@@ -84,7 +105,111 @@ class VideoEditor:
                 segment['end'] = self._parse_time(segment.get('end', 0))
             return data
         else:
-            raise ValueError("Invalid timestamp format. Expected a list of segments or a dictionary mapping videos to timestamps.")
+            raise ValueError("Invalid JSON timestamp format. Expected a list of segments or a dictionary mapping videos to timestamps.")
+
+    def _load_segments_from_txt(self):
+        """
+        Load segments from TXT format.
+        Expected format:
+        MM:SS 캐릭터이름
+        대사내용
+        
+        MM:SS 캐릭터이름  
+        대사내용
+        """
+        segments = []
+        current_segments = []
+        
+        with open(self.timestamps_file, 'r', encoding='utf-8') as f:
+            lines = f.readlines()
+        
+        # Parse lines to extract timestamps and characters
+        for line in lines:
+            line = line.strip()
+            if not line:
+                continue
+                
+            # Check if line starts with timestamp (MM:SS format)
+            if ':' in line and len(line.split()) >= 2:
+                parts = line.split(' ', 2)
+                if len(parts) >= 2:
+                    time_part = parts[0]
+                    character_part = ' '.join(parts[1:])
+                    
+                    # Validate time format
+                    if self._is_valid_time_format(time_part):
+                        current_segments.append({
+                            'time': time_part,
+                            'character': character_part
+                        })
+        
+        # Convert parsed segments to video segments
+        for i, segment in enumerate(current_segments):
+            start_time = self._parse_time(segment['time'])
+            
+            # Determine end time (next segment's start time or end of audio)
+            if i + 1 < len(current_segments):
+                end_time = self._parse_time(current_segments[i + 1]['time'])
+            else:
+                end_time = self.audio_duration
+            
+            # Map character to video file
+            video_path = self._map_character_to_video(segment['character'])
+            
+            segments.append({
+                'video': video_path,
+                'start': start_time,
+                'end': end_time
+            })
+        
+        self.logger.info(f"Loaded {len(segments)} segments from TXT file")
+        return segments
+
+    def _is_valid_time_format(self, time_str):
+        """Check if string is in valid time format (MM:SS or HH:MM:SS)."""
+        try:
+            parts = time_str.split(':')
+            if len(parts) == 2:
+                # MM:SS format
+                int(parts[0])  # Minutes
+                int(parts[1])  # Seconds
+                return True
+            elif len(parts) == 3:
+                # HH:MM:SS format
+                int(parts[0])  # Hours
+                int(parts[1])  # Minutes
+                int(parts[2])  # Seconds
+                return True
+            return False
+        except ValueError:
+            return False
+
+    def _map_character_to_video(self, character_name):
+        """
+        Map character names to video file paths.
+        You can customize this mapping in the config or create a separate mapping file.
+        """
+        # Default character to video mapping
+        character_mapping = {
+            '말하는 감자': 'input/말하는 감자.mov',
+            '말하는 토마토': 'input/말하는 토마토.mov',
+        }
+        
+        # Check if custom mapping exists in config
+        if 'CHARACTER_MAPPING' in self.config:
+            character_mapping.update(self.config['CHARACTER_MAPPING'])
+        
+        # Find matching character (case-insensitive and partial matching)
+        character_lower = character_name.lower()
+        for char_key, video_path in character_mapping.items():
+            if char_key.lower() in character_lower or character_lower in char_key.lower():
+                self.logger.debug(f"Mapped character '{character_name}' to video '{video_path}'")
+                return video_path
+        
+        # If no mapping found, use the character name as filename
+        default_path = f"input/{character_name}.mov"
+        self.logger.warning(f"No mapping found for character '{character_name}', using default path: {default_path}")
+        return default_path
 
     def _parse_time(self, time_value):
         """

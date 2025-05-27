@@ -38,7 +38,11 @@ This will use the default configuration from `config.py`.
 ### Command-line Options
 
 ```bash
-python main.py --audio input/my-podcast.wav --timestamps input/my-timestamps.json --output my-podcast-video.mp4
+# TXT 파일 사용
+python main.py --audio input/podcast.wav --timestamps input/transcript.txt --output podcast-video.mp4
+
+# 기존 JSON 파일도 그대로 사용 가능
+python main.py --audio input/podcast.wav --timestamps input/timestamps.json --output podcast-video.mp4
 ```
 
 Available options:
