@@ -40,7 +40,8 @@ class VideoEditor:
             raise FileNotFoundError(f"Audio file not found: {self.audio_file}")
         
         self.audio_clip = AudioFileClip(self.audio_file)
-        self.logger.info(f"Loaded audio file: {self.audio_file} (duration: {self.audio_clip.duration:.2f}s)")
+        self.audio_duration = self.audio_clip.duration
+        self.logger.info(f"Loaded audio file: {self.audio_file} (duration: {self.audio_duration:.2f}s)")
         
         # Cache for video clips to avoid reloading
         self.video_cache = {}
@@ -90,7 +91,7 @@ class VideoEditor:
         Parse time values in various formats to seconds.
         
         Args:
-            time_value: Time value in seconds (float/int) or string format "MM:SS"
+            time_value: Time value in seconds (float/int), string format "MM:SS", or "end"
             
         Returns:
             float: Time in seconds
@@ -98,8 +99,12 @@ class VideoEditor:
         if isinstance(time_value, (int, float)):
             return float(time_value)
         elif isinstance(time_value, str):
+            # Handle special "end" keyword
+            if time_value.lower() == 'end':
+                self.logger.info(f"Using audio file end time: {self.audio_duration:.2f}s")
+                return self.audio_duration
             # Handle "MM:SS" format
-            if ':' in time_value:
+            elif ':' in time_value:
                 parts = time_value.split(':')
                 if len(parts) == 2:
                     return int(parts[0]) * 60 + float(parts[1])
