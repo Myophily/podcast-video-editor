@@ -118,11 +118,6 @@ dmypy.json
 # pytype
 .pytype/
 
-# Output directory
-/output/
-/output/*
-!/output/.gitkeep
-
 # Log files
 *.log
 logs/
