@@ -137,4 +137,4 @@ Logs are generated in the output directory with the timestamp of the run (e.g., 
 
 ---
 
-Made by Myophily, Assisted by Claude 3.7 sonnet, 2025
+Made by Myophily, Assisted by Claude sonnet 3.7, 2025
