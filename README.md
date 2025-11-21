@@ -1,150 +1,139 @@
-# Podcast Video Editor
+# Podcast Video Automation Tool
 
-A command-line tool that automates the creation of podcast videos with talking character animations. This tool intelligently combines character video clips with audio based on a timestamp file, handling looping and cutting to match each segment's exact duration.
+This tool automates the creation of podcast videos by synchronizing an audio track with specific video loops based on timestamps. It is designed to easily generate "visual podcast" style videos where different characters or avatars appear on screen corresponding to who is speaking.
+
+## Example Videos
+
+To see videos created using this tool, please visit: **[https://www.youtube.com/@pomato_potcast](https://www.youtube.com/@pomato_potcast)**
 
 ## Features
 
-- **Talking Character Animation**: Synchronizes character animations with podcast audio.
-- **Intelligent Looping**: Automatically loops animations for segments longer than the original video.
-- **Flexible Timestamp Formats**: Supports both JSON and TXT timestamp files.
-- **Customizable Output**: Configure video resolution, FPS, codec, and more.
-- **Robust Error Handling**: Detailed logging and error reporting.
+- **Automatic Synchronization**: Syncs audio segments with specific character videos.
+- **Smart Looping**: Automatically loops short video clips to match the duration of the specific audio segment.
+- **Multiple Input Formats**: Supports both structured JSON and simple TXT script files for defining timestamps.
+- **Flexible Configuration**: Configure via command-line arguments or environment variables (`.env`).
+- **Character Mapping**: Automatically maps character names from text scripts to video files.
 
-## Getting Started
+## Installation
 
-### Prerequisites
+1.  **Clone the repository**
 
-- Python 3.7+
-- FFmpeg (must be installed and accessible in your system's PATH)
+    ```bash
+    git clone https://github.com/Myophily/podcast-video-editor.git
+    cd podcast-video-editor
+    ```
 
-### Installation
+2.  **Install dependencies**
+    Make sure you have Python installed (3.8+ recommended), then run:
+    ```bash
+    pip install -r requirements.txt
+    ```
+    _Note: This project uses `moviepy` which requires FFMPEG to be installed on your system._
 
-1. **Clone the repository:**
+## Usage
 
-   ```bash
-   git clone https://github.com/yourusername/podcast-video-editor.git
-   cd podcast-video-editor
-   ```
+### Basic Command
 
-2. **Install the required Python packages:**
-   ```bash
-   pip install -r requirements.txt
-   ```
-
-### Directory Structure
-
-- **`input/`**: Place your audio files, video clips, and timestamp files here.
-- **`output/`**: The generated videos and logs will be saved in this directory.
-
-### Usage
-
-Run the tool from the command line. You can specify the audio, timestamps, and output file paths.
-
-**Basic command:**
+Run the tool using `main.py`:
 
 ```bash
-python main.py --audio input/podcast.wav --timestamps input/timestamps.json --output my-podcast.mp4
+python main.py --audio input/podcast.wav --timestamps input/timestamps.txt --output output/final_video.mp4
 ```
 
-**Using a TXT timestamp file:**
+### Command Line Arguments
+
+- `--audio`: Path to the source audio file (e.g., `.wav`, `.mp3`).
+- `--timestamps`: Path to the timestamps file (supports `.json` or `.txt`).
+- `--output`: (Optional) Name of the output video file.
+- `--output-dir`: (Optional) Directory to save the output files.
+
+### Running with Defaults
+
+If you configure your paths in `config.py` or use a `.env` file, you can simply run:
 
 ```bash
-python main.py --audio input/podcast.wav --timestamps input/transcript.txt --output my-podcast.mp4
+python main.py
 ```
 
-## Configuration
+## Input File Formats
 
-You can configure the video editor using command-line arguments or environment variables.
+### 1\. Text Format (`.txt`)
 
-### Command-Line Arguments
+This format is useful for simple scripts. It parses standard script formats to determine timestamps and the active character.
 
-| Argument       | Description                                | Default  |
-| -------------- | ------------------------------------------ | -------- |
-| `--audio`      | Path to the audio file.                    | `None`   |
-| `--timestamps` | Path to the timestamps file (JSON or TXT). | `None`   |
-| `--output`     | Name of the output video file.             | `None`   |
-| `--output-dir` | Directory for output files.                | `output` |
+**Format:**
 
-### Environment Variables
+```text
+MM:SS Character Name
+Dialogue or description...
 
-| Variable            | Description                             | Default   |
-| ------------------- | --------------------------------------- | --------- |
-| `AUDIO_FILE`        | Path to the audio file.                 | `None`    |
-| `TIMESTAMPS_FILE`   | Path to the timestamps file.            | `None`    |
-| `OUTPUT_DIR`        | Directory for output files.             | `output`  |
-| `VIDEO_FPS`         | Frames per second for the output video. | `24`      |
-| `VIDEO_CODEC`       | Video codec.                            | `libx264` |
-| `VIDEO_AUDIO_CODEC` | Audio codec.                            | `aac`     |
-| `ENCODING_PRESET`   | Encoding preset.                        | `medium`  |
-| `CRF_VALUE`         | Constant Rate Factor for quality.       | `23`      |
-| `THREADS`           | Number of threads for encoding.         | `4`       |
-| `LOG_LEVEL`         | Logging level.                          | `INFO`    |
+MM:SS Another Character
+Response dialogue...
+```
 
-## Timestamp File Formats
+**Example:**
 
-The tool supports two formats for timestamps: a JSON file and a TXT file.
+```text
+00:00 Speaking Potato
+Hello everyone, welcome to the show.
 
-### JSON Format
+00:15 Speaking Tomato
+Thanks for having me!
+```
 
-The JSON file can be a list of segments or a dictionary mapping videos to time ranges.
+**Character Mapping:**
+By default, the tool looks for video files in the `input/` folder matching the character name (e.g., "Speaking Potato" -\> `input/Speaking Potato.mov`). You can customize this mapping in `video_editor.py` or rely on filename matching.
 
-**1. List of Segments:**
+### 2\. JSON Format (`.json`)
+
+Use this for precise control over video paths and exact start/end times.
+
+**Format:**
 
 ```json
 [
   {
-    "video": "input/character1.mov",
+    "video": "input/character_a.mov",
     "start": 0,
-    "end": 21
+    "end": 15.5
   },
   {
-    "video": "input/character2.mov",
-    "start": 22,
-    "end": 23
+    "video": "input/character_b.mov",
+    "start": 15.5,
+    "end": "end"
   }
 ]
 ```
 
-**2. Dictionary Mapping:**
+- `start`/`end`: Can be in seconds (float) or "MM:SS" format.
+- `"end"`: Use the string "end" to indicate the end of the audio file.
 
-Time values can be in seconds (integer or float) or in `"MM:SS"` format.
+## Configuration
 
-```json
-{
-  "input/character1.mov": {
-    "start_time": "00:00",
-    "end_time": "00:21"
-  },
-  "input/character2.mov": {
-    "start_time": "00:22",
-    "end_time": "00:23"
-  }
-}
-```
+You can modify settings in `config.py` or create a `.env` file in the root directory to override defaults without changing the code.
 
-### TXT Format
+**Available Environment Variables:**
 
-The TXT file should contain one segment per line, with the video file path, start time, and end time separated by spaces.
+| Variable          | Description                    | Default                 |
+| :---------------- | :----------------------------- | :---------------------- |
+| `AUDIO_FILE`      | Default input audio path       | `input/podcast.wav`     |
+| `TIMESTAMPS_FILE` | Default timestamps file path   | `input/timestamps.json` |
+| `OUTPUT_DIR`      | Output directory               | `output`                |
+| `VIDEO_FPS`       | Frames per second for output   | `30`                    |
+| `VIDEO_CODEC`     | Video codec                    | `libx264`               |
+| `THREADS`         | Number of threads for encoding | `4`                     |
+| `LOG_LEVEL`       | Logging verbosity              | `INFO`                  |
 
-```
-input/character1.mov 0 21
-input/character2.mov 22 23
-```
+## Project Structure
 
-## How It Works
+- `main.py`: Entry point. Handles argument parsing, input validation, and orchestration.
+- `video_editor.py`: Core logic. Handles video loading, segment processing, looping, and concatenation via `moviepy`.
+- `config.py`: Configuration settings and environment variable loading.
+- `requirements.txt`: Python package dependencies.
 
-The video editor processes each segment from the timestamp file to create a video clip with the correct duration.
+## Logging
 
-1. **Calculate Duration**: The tool calculates the exact duration needed for each segment.
-2. **Loop or Trim Video**:
-   - If the segment is shorter than the animation, the animation is trimmed to the required length.
-   - If the segment is longer, the animation is looped to match the segment's duration.
-3. **Synchronize Audio**: The podcast audio is cut to match the segment's duration.
-4. **Combine and Concatenate**: The audio and video are combined for each segment, and all segments are concatenated to create the final video.
-
-## Contributing
-
-Contributions are welcome! Please feel free to submit a pull request or open an issue.
+Logs are generated in the output directory with the timestamp of the run (e.g., `podcast_automation_YYYYMMDD_HHMMSS.log`) and are also printed to the console.
 
 ---
 
